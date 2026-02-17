@@ -22,7 +22,7 @@ def test_example_like_splitting():
 
     chunks = list(iter_dt_chunks(df, "dt", chunk_size=2))
 
-    # last chunk may be smaller than chunk_size
+    # последний чанк может быть меньше chunk_size
     assert [len(c) for c in chunks] == [2, 3, 1]
     assert pd.concat(chunks, ignore_index=True).equals(df.reset_index(drop=True))
 

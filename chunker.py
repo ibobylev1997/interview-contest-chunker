@@ -13,16 +13,16 @@ def iter_dt_chunks(
     *,
     assume_sorted: bool = True,
 ) -> Iterator[pd.DataFrame]:
-    """Yield chunks split by runs of equal values in `col` (e.g. dt).
+    """Возвращает чанки DataFrame по сериям одинаковых значений в `col` (например dt)
 
-    Guarantees:
-    - Never splits the same datetime value across chunks.
-    - Each yielded chunk has len >= chunk_size, except possibly the last chunk.
-    - Memory-friendly: no groupby, no per-row python loops; slices by iloc.
+    Гарантии
+    - Одинаковое значение даты никогда не окажется в разных чанках
+    - Каждый чанк имеет размер >= chunk_size кроме возможно последнего
+    - Память расходуется экономно без groupby и без построчных python циклов, используются срезы iloc
 
-    Notes:
-    - If `assume_sorted=True`, requires `df[col]` to be monotonic increasing.
-    - If `assume_sorted=False`, will stably sort by `col` (extra memory).
+    Примечания
+    - Если assume_sorted=True то требуется чтобы df[col] был монотонно неубывающим
+    - Если assume_sorted=False то при необходимости будет выполнена стабильная сортировка по col что потребует дополнительной памяти
     """
 
     if chunk_size <= 0:
