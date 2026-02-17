@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Iterator
 
-import numpy as np
 import pandas as pd
 
 
@@ -13,12 +12,12 @@ def iter_dt_chunks(
     *,
     assume_sorted: bool = True,
 ) -> Iterator[pd.DataFrame]:
-    """Возвращает чанки DataFrame по сериям одинаковых значений в `col` (например dt)
+    """Возвращает чанки DataFrame по сериям одинаковых значений в `col` например dt
 
     Гарантии
     - Одинаковое значение даты никогда не окажется в разных чанках
     - Каждый чанк имеет размер >= chunk_size кроме возможно последнего
-    - Память расходуется экономно без groupby и без построчных python циклов, используются срезы iloc
+    - Память расходуется оптимально по памяти O(1) доп памяти, обход делается одним проходом по значениям
 
     Примечания
     - Если assume_sorted=True то требуется чтобы df[col] был монотонно неубывающим
@@ -43,24 +42,34 @@ def iter_dt_chunks(
             df = df.sort_values(col, kind="mergesort")
             s = df[col]
 
-    v = s.to_numpy()
+    # Берем numpy представление без копирования когда это возможно
+    v = s.to_numpy(copy=False)
+
     if n == 1:
         yield df
         return
 
-    change_idx = np.flatnonzero(v[1:] != v[:-1]) + 1
-    boundaries = np.concatenate(([0], change_idx, [n]))
-    run_sizes = np.diff(boundaries)
-
     start = 0
+    run_start = 0
     acc = 0
-    for i, run_len in enumerate(run_sizes, start=1):
-        acc += int(run_len)
-        if acc >= chunk_size:
-            end = int(boundaries[i])
-            yield df.iloc[start:end]
-            start = end
-            acc = 0
 
+    prev = v[0]
+
+    for i in range(1, n):
+        cur = v[i]
+        if cur != prev:
+            run_end = i
+            run_len = run_end - run_start
+            acc += run_len
+
+            if acc >= chunk_size:
+                yield df.iloc[start:run_end]
+                start = run_end
+                acc = 0
+
+            run_start = run_end
+            prev = cur
+
+    # Закрываем последнюю серию и отдаем остаток
     if start < n:
         yield df.iloc[start:n]
